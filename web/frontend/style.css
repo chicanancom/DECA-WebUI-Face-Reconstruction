@@ -1,0 +1,397 @@
+:root {
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --bg-dark: #0f172a;
+    --card-bg: rgba(30, 41, 59, 0.7);
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background: var(--bg-dark);
+    color: var(--text-main);
+    height: 100vh;
+    overflow: hidden;
+}
+
+#container {
+    display: flex;
+    height: 100vh;
+}
+
+/* Sidebar Styling */
+#sidebar {
+    width: 320px;
+    min-width: 250px;
+    max-width: 600px;
+    flex-shrink: 0;
+    background: var(--card-bg);
+    backdrop-filter: blur(12px);
+    border-right: 1px solid var(--glass-border);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    z-index: 10;
+    overflow-y: auto;
+}
+
+#sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+    background: var(--glass-border);
+    border-radius: 4px;
+}
+
+.logo h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.logo span {
+    color: var(--primary);
+}
+
+.logo p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* Upload Section */
+#drop-zone {
+    border: 2px dashed var(--glass-border);
+    border-radius: 1rem;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+#drop-zone:hover, #drop-zone.active {
+    border-color: var(--primary);
+    background: rgba(79, 70, 229, 0.05);
+}
+
+.icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+#drop-zone p {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+#drop-zone span {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.primary-btn {
+    width: 100%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 1rem;
+    transition: background 0.2s;
+}
+
+.primary-btn:hover {
+    background: var(--primary-hover);
+}
+
+.secondary-btn {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    border: 1px solid var(--glass-border);
+    padding: 0.6rem;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 1rem;
+    transition: all 0.2s;
+}
+
+.secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--primary);
+}
+
+.info-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.85rem;
+}
+
+.info-card h3 {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+#status {
+    margin-top: auto;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Resizer Styling */
+#resizer {
+    width: 4px;
+    cursor: col-resize;
+    background: transparent;
+    transition: background 0.2s, width 0.2s;
+    position: relative;
+    z-index: 15;
+}
+
+#resizer:hover, #resizer.active {
+    background: var(--primary);
+    width: 6px;
+}
+
+#resizer::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 30px;
+    background: var(--glass-border);
+    border-radius: 1px;
+    transition: opacity 0.2s;
+}
+
+#resizer:hover::after, #resizer.active::after {
+    opacity: 0;
+}
+
+/* Viewer Area */
+#viewer {
+    flex: 1;
+    position: relative;
+    background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+    min-width: 0;
+    overflow: hidden;
+}
+
+#canvas-container canvas {
+    display: block;
+}
+
+#canvas-container {
+    width: 100%;
+    height: 100%;
+}
+
+/* Loading Overlay */
+#loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    backdrop-filter: blur(4px);
+}
+
+.hidden {
+    display: none !important;
+}
+
+.loader {
+    width: 48px;
+    height: 48px;
+    border: 5px solid #FFF;
+    border-bottom-color: var(--primary);
+    border-radius: 50%;
+    display: inline-block;
+    box-sizing: border-box;
+    animation: rotation 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes rotation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Controls Overlay */
+.controls-overlay {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.75rem;
+    pointer-events: none; /* Allow clicks to pass through to canvas if needed, but buttons need pointer-events: auto */
+    z-index: 100;
+}
+
+.controls-overlay > * {
+    pointer-events: auto;
+}
+
+#reset-cam {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    color: white;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+#reset-cam:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+}
+
+/* Stat Card Styles */
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.stat-item label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.stat-item span {
+    font-weight: 600;
+}
+
+.progress-container {
+    width: 60%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), #818cf8);
+    transition: width 0.5s ease-out;
+}
+
+/* Customization Styles */
+.control-group {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.control-group label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.control-group select {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid var(--glass-border);
+    color: white;
+    padding: 0.5rem;
+    border-radius: 0.4rem;
+    outline: none;
+    cursor: pointer;
+}
+
+.control-group input[type="range"] {
+    width: 100%;
+    accent-color: var(--primary);
+}
+
+.color-presets {
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.color-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.color-btn:hover {
+    transform: scale(1.2);
+}
+
+.color-btn.active {
+    border-color: var(--primary);
+}
+
+/* Face List Styles */
+#face-list-container h3 {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+#face-list {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.face-item {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+    font-weight: 600;
+}
+
+.face-item:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.face-item.active {
+    border-color: var(--primary);
+    background: var(--primary);
+}

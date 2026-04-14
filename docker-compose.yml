@@ -1,15 +1,27 @@
-version: '3'
-services:     
-  deca-jupyter:
-    container_name: deca-jupyter
-    network_mode: "host"
+version: '3.8'
+
+services:
+  deca-web:
     build:
-      dockerfile: Dockerfile
       context: .
-    devices:
-      - /dev/nvidia0:/dev/nvidia0
-      - /dev/nvidiactl:/dev/nvidiactl
-      - /dev/nvidia-modeset:/dev/nvidia-modeset
-      - /dev/nvidia-uvm:/dev/nvidia-uvm
-      - /dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools
-    entrypoint: 'jupyter notebook --allow-root --NotebookApp.allow_origin=https://colab.research.google.com --port=8080 --NotebookApp.port_retries=0'
+      dockerfile: Dockerfile
+    container_name: deca-web-app
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - /app/web/uploads
+      - /app/web/outputs
+    # --- GPU CONFIGURATION (Comment out the block below if the server has NO GPU) ---
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # --------------------------------------------------------------------------------
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - USE_CPU_ONLY=0 # Set to 1 to force CPU even if GPU is present
+    restart: unless-stopped

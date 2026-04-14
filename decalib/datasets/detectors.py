@@ -17,9 +17,9 @@ import numpy as np
 import torch
 
 class FAN(object):
-    def __init__(self):
+    def __init__(self, device='cpu'):
         import face_alignment
-        self.model = face_alignment.FaceAlignment(face_alignment.LandmarksType._2D, flip_input=False)
+        self.model = face_alignment.FaceAlignment(face_alignment.LandmarksType.TWO_D, flip_input=False, device=device, compile=False)
 
     def run(self, image):
         '''
@@ -43,7 +43,7 @@ class MTCNN(object):
         '''
         from facenet_pytorch import MTCNN as mtcnn
         self.device = device
-        self.model = mtcnn(keep_all=True)
+        self.model = mtcnn(keep_all=True, device=device)
     def run(self, input):
         '''
         image: 0-255, uint8, rgb, [h, w, 3]

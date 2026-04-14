@@ -14,13 +14,16 @@
 # For commercial licensing contact, please contact ps-license@tuebingen.mpg.de
 
 import os, sys
+import warnings
+warnings.filterwarnings("ignore")
+import torch
+torch.compile = lambda x, **kwargs: x
 import cv2
 import numpy as np
 from time import time
 from scipy.io import savemat
 import argparse
 from tqdm import tqdm
-import torch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from decalib.deca import DECA
@@ -37,7 +40,7 @@ def main(args):
     os.makedirs(savefolder, exist_ok=True)
 
     # load test images 
-    testdata = datasets.TestData(args.inputpath, iscrop=args.iscrop, face_detector=args.detector, sample_step=args.sample_step)
+    testdata = datasets.TestData(args.inputpath, iscrop=args.iscrop, face_detector=args.detector, sample_step=args.sample_step, device=device)
 
     # run DECA
     deca_cfg.model.use_tex = args.useTex

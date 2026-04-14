@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DECA 3D Face Reconstruction</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="container">
+        <!-- Dashboard Sidebar -->
+        <aside id="sidebar">
+            <div class="logo">
+                <h1>DECA <span>3D</span></h1>
+                <p>AI Face Reconstruction</p>
+            </div>
+
+            <div id="face-list-container" class="hidden">
+                <h3>Khuôn mặt phát hiện</h3>
+                <div id="face-list"></div>
+            </div>
+
+            <div class="upload-section">
+                <div id="drop-zone">
+                    <div class="icon">🎬</div>
+                    <p>Thả Ảnh hoặc Video vào đây</p>
+                    <span>Hỗ trợ .jpg, .png, .mp4, .mov</span>
+                    <input type="file" id="file-input" accept="image/*,video/*" hidden>
+                </div>
+                <button id="upload-btn" class="primary-btn">Generate 3D Face</button>
+            </div>
+
+            <div class="info-card">
+                <h3>About DECA</h3>
+                <p>Detailed Expression Capture and Animation from a single image.</p>
+            </div>
+
+            <div class="info-card hidden" id="face-stats">
+                <h3>Phân Tích Khuôn Mặt</h3>
+                <div class="stat-item">
+                    <label>Tư thế head:</label>
+                    <span id="pose-val">P: 0, Y: 0, R: 0</span>
+                </div>
+                <div class="stat-item">
+                    <label>Mouth:</label>
+                    <span id="mouth-val">Đang đóng</span>
+                </div>
+                <div class="stat-item">
+                    <label>Cường độ biểu cảm:</label>
+                    <div class="progress-container">
+                        <div id="exp-bar" class="progress-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <button id="download-obj" class="secondary-btn">Tải về file 3D (.OBJ)</button>
+            </div>
+
+            <div class="info-card" id="customization">
+                <h3>Tùy Chỉnh 3D</h3>
+                <div class="control-group">
+                    <label>Vật liệu:</label>
+                    <select id="mat-select">
+                        <option value="realistic">Ảnh thật (Texture)</option>
+                        <option value="wireframe">Khung dây (Wireframe)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Ánh sáng:</label>
+                    <input type="range" id="light-intensity" min="0" max="2" step="0.1" value="1">
+                </div>
+                <div id="video-controls" class="control-group hidden">
+                    <label>Khung hình (Video):</label>
+                    <input type="range" id="frame-slider" min="0" max="0" value="0">
+                    <button id="toggle-play" class="secondary-btn" style="margin-top: 5px; padding: 4px;">Tạm dừng</button>
+                </div>
+                <div class="control-group">
+                    <label>Màu nền:</label>
+                    <div class="color-presets">
+                        <button class="color-btn" data-color="#0f172a" style="background: #0f172a"></button>
+                        <button class="color-btn" data-color="#2d3436" style="background: #2d3436"></button>
+                        <button class="color-btn" data-color="#1e272e" style="background: #1e272e"></button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="status">Ready</div>
+        </aside>
+        
+        <!-- Sidebar Resizer -->
+        <div id="resizer"></div>
+
+        <!-- 3D Canvas Area -->
+        <main id="viewer">
+            <div id="canvas-container"></div>
+            <div id="loading-overlay" class="hidden">
+                <div class="loader"></div>
+                <p>Reconstructing 3D Face...</p>
+            </div>
+            
+            <div class="controls-overlay">
+                <button id="reset-cam" title="Reset Camera">🏠</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>

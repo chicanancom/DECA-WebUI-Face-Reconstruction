@@ -47,7 +47,30 @@ class DECA(nn.Module):
         self.uv_size = self.cfg.model.uv_size
 
         self._create_model(self.cfg.model)
-        self._setup_renderer(self.cfg.model)
+        # load topology data
+        from .utils.util import load_obj
+        if self.cfg.rasterizer_type == 'pytorch3d':
+            verts, faces, aux = load_obj(self.cfg.model.topology_path)
+            uvcoords = aux.verts_uvs[None, ...]      # (N, V, 2)
+            uvfaces = faces.textures_idx[None, ...] # (N, F, 3)
+            faces = faces.verts_idx[None,...]
+        else:
+            verts, uvcoords, faces, uvfaces = load_obj(self.cfg.model.topology_path)
+            verts = verts[None, ...]
+            uvcoords = uvcoords[None, ...]
+            faces = faces[None, ...]
+            uvfaces = uvfaces[None, ...]
+        
+        self.register_buffer('faces', faces.to(self.device).long())
+        self.register_buffer('raw_uvcoords', uvcoords.to(self.device).float())
+        self.register_buffer('uvfaces', uvfaces.to(self.device).long())
+
+        # setup renderer
+        try:
+            self._setup_renderer(self.cfg.model)
+        except Exception:
+            print("Note: Renderer not setup (requires Visual Studio). Visualization disabled, but .obj generation still works.")
+            self.render = None
 
     def _setup_renderer(self, model_cfg):
         set_rasterizer(self.cfg.rasterizer_type)
@@ -86,7 +109,7 @@ class DECA(nn.Module):
         model_path = self.cfg.pretrained_modelpath
         if os.path.exists(model_path):
             print(f'trained model found. load {model_path}')
-            checkpoint = torch.load(model_path)
+            checkpoint = torch.load(model_path, map_location=self.device)
             self.checkpoint = checkpoint
             util.copy_state_dict(self.E_flame.state_dict(), checkpoint['E_flame'])
             util.copy_state_dict(self.E_detail.state_dict(), checkpoint['E_detail'])
@@ -196,7 +219,7 @@ class DECA(nn.Module):
             h, w = self.image_size, self.image_size
             background = None
 
-        if rendering:
+        if rendering and self.render:
             # ops = self.render(verts, trans_verts, albedo, codedict['light'])
             ops = self.render(verts, trans_verts, albedo, h=h, w=w, background=background)
             ## output
@@ -204,11 +227,13 @@ class DECA(nn.Module):
             opdict['rendered_images'] = ops['images']
             opdict['alpha_images'] = ops['alpha_images']
             opdict['normal_images'] = ops['normal_images']
+        else:
+            ops = None
         
         if self.cfg.model.use_tex:
             opdict['albedo'] = albedo
             
-        if use_detail:
+        if use_detail and ops is not None and self.render is not None:
             uv_z = self.D_detail(torch.cat([codedict['pose'][:,3:], codedict['exp'], codedict['detail']], dim=1))
             if iddict is not None:
                 uv_z = self.D_detail(torch.cat([iddict['pose'][:,3:], iddict['exp'], codedict['detail']], dim=1))
@@ -221,16 +246,19 @@ class DECA(nn.Module):
             opdict['uv_detail_normals'] = uv_detail_normals
             opdict['displacement_map'] = uv_z+self.fixed_uv_dis[None,None,:,:]
         
-        if vis_lmk:
+        if vis_lmk and ops is not None:
             landmarks3d_vis = self.visofp(ops['transformed_normals'])#/self.image_size
             landmarks3d = torch.cat([landmarks3d, landmarks3d_vis], dim=2)
             opdict['landmarks3d'] = landmarks3d
 
-        if return_vis:
+        if return_vis and self.render is not None:
             ## render shape
             shape_images, _, grid, alpha_images = self.render.render_shape(verts, trans_verts, h=h, w=w, images=background, return_grid=True)
-            detail_normal_images = F.grid_sample(uv_detail_normals, grid, align_corners=False)*alpha_images
-            shape_detail_images = self.render.render_shape(verts, trans_verts, detail_normal_images=detail_normal_images, h=h, w=w, images=background)
+            if use_detail and 'uv_detail_normals' in opdict:
+                detail_normal_images = F.grid_sample(opdict['uv_detail_normals'], grid, align_corners=False)*alpha_images
+                shape_detail_images = self.render.render_shape(verts, trans_verts, detail_normal_images=detail_normal_images, h=h, w=w, images=background)
+                opdict['shape_detail_images'] = shape_detail_images
+            opdict['shape_images'] = shape_images
             
             ## extract texture
             ## TODO: current resolution 256x256, support higher resolution, and add visibility
@@ -248,18 +276,23 @@ class DECA(nn.Module):
             opdict['uv_texture_gt'] = uv_texture_gt
             visdict = {
                 'inputs': images, 
-                'landmarks2d': util.tensor_vis_landmarks(images, landmarks2d),
-                'landmarks3d': util.tensor_vis_landmarks(images, landmarks3d),
-                'shape_images': shape_images,
-                'shape_detail_images': shape_detail_images
             }
-            if self.cfg.model.use_tex:
+            if 'landmarks2d' in opdict:
+                visdict['landmarks2d'] = util.tensor_vis_landmarks(images, opdict['landmarks2d'])
+            if 'landmarks3d' in opdict:
+                visdict['landmarks3d'] = util.tensor_vis_landmarks(images, opdict['landmarks3d'])
+            if 'shape_images' in opdict:
+                visdict['shape_images'] = opdict['shape_images']
+            if 'shape_detail_images' in opdict:
+                visdict['shape_detail_images'] = opdict['shape_detail_images']
+            
+            if self.cfg.model.use_tex and ops is not None:
                 visdict['rendered_images'] = ops['images']
 
             return opdict, visdict
 
         else:
-            return opdict
+            return opdict, {}
 
     def visualize(self, visdict, size=224, dim=2):
         '''
@@ -287,27 +320,47 @@ class DECA(nn.Module):
         '''
         i = 0
         vertices = opdict['verts'][i].cpu().numpy()
-        faces = self.render.faces[0].cpu().numpy()
-        texture = util.tensor2image(opdict['uv_texture_gt'][i])
-        uvcoords = self.render.raw_uvcoords[0].cpu().numpy()
-        uvfaces = self.render.uvfaces[0].cpu().numpy()
-        # save coarse mesh, with texture and normal map
-        normal_map = util.tensor2image(opdict['uv_detail_normals'][i]*0.5 + 0.5)
+        faces = self.faces[0].cpu().numpy()
+        
+        # Check if texture and detail data exists
+        has_texture = 'uv_texture_gt' in opdict
+        has_detail = 'uv_detail_normals' in opdict and 'displacement_map' in opdict and 'normals' in opdict
+
+        if has_texture:
+            texture = util.tensor2image(opdict['uv_texture_gt'][i])
+            uvcoords = self.raw_uvcoords[0].cpu().numpy()
+            uvfaces = self.uvfaces[0].cpu().numpy()
+        else:
+            texture = None
+            uvcoords = None
+            uvfaces = None
+
+        if has_detail:
+            normal_map = util.tensor2image(opdict['uv_detail_normals'][i]*0.5 + 0.5)
+        else:
+            normal_map = None
+
+        # save coarse mesh
         util.write_obj(filename, vertices, faces, 
                         texture=texture, 
                         uvcoords=uvcoords, 
                         uvfaces=uvfaces, 
                         normal_map=normal_map)
-        # upsample mesh, save detailed mesh
-        texture = texture[:,:,[2,1,0]]
-        normals = opdict['normals'][i].cpu().numpy()
-        displacement_map = opdict['displacement_map'][i].cpu().numpy().squeeze()
-        dense_vertices, dense_colors, dense_faces = util.upsample_mesh(vertices, normals, faces, displacement_map, texture, self.dense_template)
-        util.write_obj(filename.replace('.obj', '_detail.obj'), 
-                        dense_vertices, 
-                        dense_faces,
-                        colors = dense_colors,
-                        inverse_face_order=True)
+
+        # upsample mesh, save detailed mesh if data available
+        if has_detail:
+            if texture is not None:
+                texture_rgb = texture[:,:,[2,1,0]]
+            else:
+                texture_rgb = None
+            normals = opdict['normals'][i].cpu().numpy()
+            displacement_map = opdict['displacement_map'][i].cpu().numpy().squeeze()
+            dense_vertices, dense_colors, dense_faces = util.upsample_mesh(vertices, normals, faces, displacement_map, texture_rgb, self.dense_template)
+            util.write_obj(filename.replace('.obj', '_detail.obj'), 
+                            dense_vertices, 
+                            dense_faces,
+                            colors = dense_colors,
+                            inverse_face_order=True)
     
     def run(self, imagepath, iscrop=True):
         ''' An api for running deca given an image path

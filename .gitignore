@@ -40,10 +40,22 @@ Thumbs.db
 *.pyc
 __pycache__
 
-## deca data
+# deca data
 *results*
 # *_vis.jpg
 ## internal use
 cluster_scripts
 internal
 *TestSamples*
+
+# Custom Web UI folders
+web/uploads/*
+web/outputs/*
+!web/uploads/.gitkeep
+!web/outputs/.gitkeep
+
+# Model weights
+data/*
+*.tar
+*.pth
+*.weights
